@@ -1,0 +1,16 @@
+{
+    "name": "libparam",
+    "version": "1.0.0",
+    "keywords": "EEPROM, Arduino, Parameter",
+    "description": "A generic template class to store, load and verify von volatile parameters used in arduino projects.",
+    "license": "GPL-3.0",
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/fjulian79/libparam.git"
+    },
+    "frameworks": "arduino",
+    "platforms": 
+    [
+    ]
+  }
