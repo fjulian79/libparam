@@ -6,7 +6,7 @@ A template class to store user data in nonvolatile memory by using the Arduino E
 
 ```C++
 #include <Arduino.h>
-#include <param/param.h>
+#include <param/param.hpp>
 
 typedef struct
 {
@@ -23,7 +23,7 @@ void setup()
     while (!Serial);   
     Serial.println();
     
-    if(param.read() != true)
+    if(param.begin() != true)
     {
         param.clear();
         param.write();
