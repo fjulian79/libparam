@@ -26,6 +26,11 @@
 #include <string.h>
 
 /**
+ * Uncomment this line to enable debug output. 
+ */
+// #define PARAM_DEBUG
+
+/**
  * @brief A template to use with a struct to store parameter into non volatile
  * memory by using the Arduino EEPROM support.
  * 
@@ -61,6 +66,19 @@ template <typename T> class Param
             clear();
         }
 
+        bool begin(void)
+        {
+            #ifdef ESP32
+            /* The ESP32 EEPROM implementation depends on calling begin(size)
+             * before it becomes functional. Other platforms don't even provide
+             * this api at all. */
+            EEPROM.begin(size());
+            #endif
+
+            clear();
+            return read();
+        }
+
         /**
          * @brief Sets all the user data in RAM to zero. 
          * 
@@ -83,11 +101,25 @@ template <typename T> class Param
         bool read(void)
         {
             crc8 crc;
+            uint8_t val = 0;
 
             EEPROM.get(addr, data);
-            
-            if (crc.calc(&data, sizeof(data)) ==
-                EEPROM.read(addr + sizeof(data)))
+            val = EEPROM.read(addr + sizeof(data));
+            crc.calc(&data, sizeof(data));
+
+            #ifdef PARAM_DEBUG
+            Serial.printf("eepom data: ");
+            for (size_t i = 0; i < sizeof(T); i++)
+            {
+                Serial.printf("%0x", ((uint8_t*) &data)[i]);
+            }
+            Serial.printf("\n");
+
+            Serial.printf("eeprom crc: 0x%0x\n", val);
+            Serial.printf("expect crc: 0x%0x\n", (uint8_t)crc);
+            #endif
+
+            if ( (uint8_t)crc == val)
             {
                 return true;
             }
@@ -108,6 +140,13 @@ template <typename T> class Param
 
             EEPROM.put(addr, data);
             EEPROM.write(addr + sizeof(data), crc.calc(&data, sizeof(data)));
+            
+            #ifdef ESP32
+            /* The ESP32 EEPROM implementation depends on calling commit() to
+             * write to the Flash. Other platforms don't even provide this api
+             * at all. */
+            EEPROM.commit();
+            #endif
         }
 
         /**
@@ -120,6 +159,13 @@ template <typename T> class Param
         {
             EEPROM.write(addr + sizeof(data),
                     ~EEPROM.read(addr + sizeof(data)));
+            
+            #ifdef ESP32
+            /* The ESP32 EEPROM implementation depends on calling commit() to
+             * write to the Flash. Other platforms don't even provide this api
+             * at all. */
+            EEPROM.commit();
+            #endif
         }
 
         /**
