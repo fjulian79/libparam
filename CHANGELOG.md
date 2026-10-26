@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog.
 
-## [v1.2.0] - UNRELEASED
+## [v1.2.0] - 2026-10-26
 ### Changed
 - Removed the dependency to libgeneric, the CRC is calculated by libparam itself. The algorithm is unchanged, stored data stays valid.
 - The library is declared for ESP32 and Raspberry Pi Pico.
