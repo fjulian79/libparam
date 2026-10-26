@@ -1,5 +1,5 @@
 /*
- * libparam, a generic template class to store, load and verify von volatile 
+ * libparam, a generic template class to store, load and verify non volatile
  * parameters used in arduino projects.
  *
  * Copyright (C) 2020 Julian Friedrich
@@ -42,21 +42,28 @@
  * @brief A template to use with a struct to store parameter into non volatile
  * memory by using the Arduino EEPROM support.
  * 
- * Pseudo code example to demostrate how to use the class:
- * 
+ * Pseudo code example to demonstrate how to use the class:
+ *
  *     typedef struct
  *     {
  *         uint32_t a[4];
  *         uint8_t b;
- *     
+ *
  *     }UserData_t;
- *     
+ *
  *     Param<UserData_t> param;
- * 
- *     param.read();
+ *
+ *     if (!param.begin())
+ *         param.clear();
  *     param.data.b = 42;
- *     param.save();
- * 
+ *     param.write();
+ *
+ * The data is stored at the given start address followed by a CRC byte, see
+ * size(). On ESP32 and Raspberry Pi Pico each call of begin() sets the size of
+ * the emulated EEPROM to the end of its own data. When using more than one
+ * instance, call begin() of the instance with the highest end address last,
+ * the ESP32 truncates the stored data to a smaller size otherwise.
+ *
  * @tparam T The definition of the users data structure.
  */
 template <typename T> class Param
@@ -66,7 +73,7 @@ template <typename T> class Param
         /**
          * @brief Construct a new Param object
          * 
-         * @param _addr The Start address in the EEPROM. Defaults to zero.
+         * @param _addr The start address in the EEPROM. Defaults to zero.
          */
         Param(size_t _addr = 0) :
           addr(_addr)
@@ -74,6 +81,12 @@ template <typename T> class Param
             clear();
         }
 
+        /**
+         * @brief Initializes the EEPROM if needed and reads the data.
+         *
+         * @return true     If the data has been read successfully.
+         * @return false    In case of a CRC error, see read().
+         */
         bool begin(void)
         {
             #ifdef PARAM_EEPROM_EMULATED
@@ -98,9 +111,10 @@ template <typename T> class Param
          * @brief Reads the data from the EEPROM starting at the configured 
          * EEPROM address.
          * 
-         * Performs also a CRC check. 
-         * 
-         * @return true     If the data has been read sucessfully. 
+         * Performs also a CRC check. In case of a CRC error the data contains
+         * whatever has been in the EEPROM, call clear() or set defaults then.
+         *
+         * @return true     If the data has been read successfully.
          * @return false    In case of a CRC error.
          */
         bool read(void)
@@ -116,28 +130,21 @@ template <typename T> class Param
             Serial.printf("eepom data: ");
             for (size_t i = 0; i < sizeof(T); i++)
             {
-                Serial.printf("%0x", ((uint8_t*) &data)[i]);
+                Serial.printf("%02x", ((uint8_t*) &data)[i]);
             }
             Serial.printf("\n");
 
-            Serial.printf("eeprom crc: 0x%0x\n", val);
-            Serial.printf("expect crc: 0x%0x\n", crc);
+            Serial.printf("eeprom crc: 0x%02x\n", val);
+            Serial.printf("expect crc: 0x%02x\n", crc);
             #endif
 
-            if (crc == val)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return crc == val;
         }
 
         /**
          * @brief Writes the user data from RAM to the EEPROM.
          * 
-         * Postpones the user datta in the EEPROM with a CRC byte.
+         * Appends a CRC byte to the user data in the EEPROM.
          *
          * @return true     If the data has been written successfully.
          * @return false    If writing to the flash failed.
@@ -158,7 +165,7 @@ template <typename T> class Param
          * @brief Discards the data in the EEPROM.
          * 
          * This is done by inverting the stored CRC. The next read attempt will
-         * fail because of a invalid CRC.
+         * fail because of an invalid CRC.
          *
          * @return true     If the data has been discarded successfully.
          * @return false    If writing to the flash failed.
@@ -186,7 +193,7 @@ template <typename T> class Param
         }
 
         /**
-         * @brief The user data, can be used by accassing this member.
+         * @brief The user data, can be used by accessing this member.
          */
         T data;
 
@@ -220,7 +227,7 @@ template <typename T> class Param
         }
 
         /**
-         * @brief The Address in the EEPROM.
+         * @brief The start address in the EEPROM.
          */
         size_t addr;
 };
