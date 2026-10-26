@@ -77,7 +77,7 @@ template <typename T> class Param
         bool begin(void)
         {
             #ifdef PARAM_EEPROM_EMULATED
-            EEPROM.begin(size());
+            EEPROM.begin(addr + size());
             #endif
 
             clear();
