@@ -21,7 +21,6 @@
  */
 #include <Arduino.h>
 #include <EEPROM.h>
-#include <generic/crc8.hpp>
 #include <stdint.h>
 #include <string.h>
 
@@ -100,12 +99,12 @@ template <typename T> class Param
          */
         bool read(void)
         {
-            crc8 crc;
+            uint8_t crc = 0;
             uint8_t val = 0;
 
             EEPROM.get(addr, data);
             val = EEPROM.read(addr + sizeof(data));
-            crc.calc(&data, sizeof(data));
+            crc = calcCrc(&data, sizeof(data));
 
             #ifdef PARAM_DEBUG
             Serial.printf("eepom data: ");
@@ -116,10 +115,10 @@ template <typename T> class Param
             Serial.printf("\n");
 
             Serial.printf("eeprom crc: 0x%0x\n", val);
-            Serial.printf("expect crc: 0x%0x\n", (uint8_t)crc);
+            Serial.printf("expect crc: 0x%0x\n", crc);
             #endif
 
-            if ( (uint8_t)crc == val)
+            if (crc == val)
             {
                 return true;
             }
@@ -136,10 +135,8 @@ template <typename T> class Param
          */
         void write(void)
         {
-            crc8 crc;
-
             EEPROM.put(addr, data);
-            EEPROM.write(addr + sizeof(data), crc.calc(&data, sizeof(data)));
+            EEPROM.write(addr + sizeof(data), calcCrc(&data, sizeof(data)));
             
             #ifdef ESP32
             /* The ESP32 EEPROM implementation depends on calling commit() to
@@ -184,6 +181,33 @@ template <typename T> class Param
         T data;
 
     private:
+
+        /**
+         * @brief Calculates the CRC of the given data.
+         *
+         * CRC-8/SMBUS, polynom 0x07, init 0x00, not reflected. Must not be
+         * changed, otherwise data stored by previous versions becomes invalid.
+         *
+         * @param pData     Pointer to the data.
+         * @param siz       Number of bytes.
+         * @return uint8_t  The CRC.
+         */
+        static uint8_t calcCrc(const void *pData, size_t siz)
+        {
+            const uint8_t *p = (const uint8_t *) pData;
+            uint8_t crc = 0;
+
+            while (siz--)
+            {
+                crc ^= *p++;
+                for (uint8_t i = 0; i < 8; i++)
+                {
+                    crc = (crc & 0x80) ? (uint8_t) ((crc << 1) ^ 0x07) : (uint8_t) (crc << 1);
+                }
+            }
+
+            return crc;
+        }
 
         /**
          * @brief The Address in the EEPROM.
