@@ -25,9 +25,18 @@
 #include <string.h>
 
 /**
- * Uncomment this line to enable debug output. 
+ * Uncomment this line to enable debug output.
  */
 // #define PARAM_DEBUG
+
+#if defined(ESP32) || defined(ARDUINO_ARCH_RP2040)
+/**
+ * The EEPROM emulation of these platforms depends on calling begin(size)
+ * before it becomes functional and commit() to write to the flash. Other
+ * platforms don't even provide this api at all.
+ */
+#define PARAM_EEPROM_EMULATED
+#endif
 
 /**
  * @brief A template to use with a struct to store parameter into non volatile
@@ -67,10 +76,7 @@ template <typename T> class Param
 
         bool begin(void)
         {
-            #ifdef ESP32
-            /* The ESP32 EEPROM implementation depends on calling begin(size)
-             * before it becomes functional. Other platforms don't even provide
-             * this api at all. */
+            #ifdef PARAM_EEPROM_EMULATED
             EEPROM.begin(size());
             #endif
 
@@ -137,11 +143,8 @@ template <typename T> class Param
         {
             EEPROM.put(addr, data);
             EEPROM.write(addr + sizeof(data), calcCrc(&data, sizeof(data)));
-            
-            #ifdef ESP32
-            /* The ESP32 EEPROM implementation depends on calling commit() to
-             * write to the Flash. Other platforms don't even provide this api
-             * at all. */
+
+            #ifdef PARAM_EEPROM_EMULATED
             EEPROM.commit();
             #endif
         }
@@ -156,11 +159,8 @@ template <typename T> class Param
         {
             EEPROM.write(addr + sizeof(data),
                     ~EEPROM.read(addr + sizeof(data)));
-            
-            #ifdef ESP32
-            /* The ESP32 EEPROM implementation depends on calling commit() to
-             * write to the Flash. Other platforms don't even provide this api
-             * at all. */
+
+            #ifdef PARAM_EEPROM_EMULATED
             EEPROM.commit();
             #endif
         }

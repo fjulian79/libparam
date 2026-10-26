@@ -10,5 +10,5 @@
       "url": "https://github.com/fjulian79/libparam.git"
     },
     "frameworks": "arduino",
-    "platforms": "*"
+    "platforms": ["espressif32", "raspberrypi"]
   }
