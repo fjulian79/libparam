@@ -68,7 +68,7 @@ template <typename T> class Param
          * 
          * @param _addr The Start address in the EEPROM. Defaults to zero.
          */
-        Param(uint8_t _addr = 0) :
+        Param(size_t _addr = 0) :
           addr(_addr)
         {
             clear();
@@ -138,14 +138,19 @@ template <typename T> class Param
          * @brief Writes the user data from RAM to the EEPROM.
          * 
          * Postpones the user datta in the EEPROM with a CRC byte.
+         *
+         * @return true     If the data has been written successfully.
+         * @return false    If writing to the flash failed.
          */
-        void write(void)
+        bool write(void)
         {
             EEPROM.put(addr, data);
             EEPROM.write(addr + sizeof(data), calcCrc(&data, sizeof(data)));
 
             #ifdef PARAM_EEPROM_EMULATED
-            EEPROM.commit();
+            return EEPROM.commit();
+            #else
+            return true;
             #endif
         }
 
@@ -154,14 +159,19 @@ template <typename T> class Param
          * 
          * This is done by inverting the stored CRC. The next read attempt will
          * fail because of a invalid CRC.
+         *
+         * @return true     If the data has been discarded successfully.
+         * @return false    If writing to the flash failed.
          */
-        void discard(void)
+        bool discard(void)
         {
             EEPROM.write(addr + sizeof(data),
                     ~EEPROM.read(addr + sizeof(data)));
 
             #ifdef PARAM_EEPROM_EMULATED
-            EEPROM.commit();
+            return EEPROM.commit();
+            #else
+            return true;
             #endif
         }
 
@@ -212,5 +222,5 @@ template <typename T> class Param
         /**
          * @brief The Address in the EEPROM.
          */
-        uint8_t addr;
+        size_t addr;
 };
